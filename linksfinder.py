@@ -3,67 +3,59 @@ from bs4 import BeautifulSoup
 import json
 import os
 FILE_PATH="links_database.json"
+with open(FILE_PATH,'w',encoding='utf-8')as f:
+    json.dump("",f,ensure_ascii=False,indent=4)
 def load_existing_links(file_path):
-    existing_links=set()
-    if os.path.exists():
+    existing_links={}
+    if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    existing_links.add(line.strip())
+            existing_links=json.load(f)
     return existing_links
-def prepend_links(file_path,newlinks):
-    temp_file=file_path + '.tmp'
-    with open (temp_file, "w",encoding="utf-8") as f:
-        if not newlinks:
-            print("There is not any new links")
-            return
-        for link in newlinks:
-            f.write(link)
-        with open(file_path,"r",encoding="utf-8") as old_f:
-            for line in old_f:
-                f.write(line)
-    os.replace(temp_file,file_path)
-    return
-def get_links():
+
+def get_links(is_first_run):
     existing_links=load_existing_links(FILE_PATH)
-    is_first_run=len(existing_links)==0
     stop_scraping=False
     current_page = 1
-    newlinks=[]
+    newlinks={}
+
     while not stop_scraping:
         # Giả lập chính xác Request Headers bạn vừa gửi
+        
         headers = {
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "accept-language": "en-US,en;q=0.7",
-            "sec-ch-ua": '"Chromium";v="152", "Not?A_Brand";v="24"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "none",
-            "sec-fetch-user": "?1",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
+            'referer': 'https://www.placeholder/',
+            'accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+            'accept-language': 'en-US,en;q=0.7',
+            'sec-ch-ua': '"Chromium";v="152", "Not?A_Brand";v="24", "Brave";v="152"',
+            'sec-fetch-dest': 'image',
+            'sec-fetch-mode': 'no-cors',
+            'sec-fetch-site': 'cross-site'
         }
         # Giả lập vân tay TLS Chrome vượt Cloudflare WAF
         response = requests.get(
-            f"https://www.hentaivnx.live/{current_page}", 
+            f"https://www.placeholder/{current_page}", 
             headers=headers, 
             impersonate="chrome120"
         )
-        #Tim trang cuoi cung
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
-            if is_first_run():
-                all_page= soup.select("a.page-link")
-                last_page_number=all_page[-2].text.strip()
-            links=soup.select("a.jtip")["href"]
+            all_page= soup.select("a.page-link")
+            last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung
+            links=soup.select("a.jtip")
+            updates=soup.select(f'div:nth-child({i}) > figure > figcaption > ul > li:nth-child(1) > a')
+            i=0
             for link in links:
-                if link not in newlinks:
-                    newlinks.append(link)
+                link=link["href"]
+                update=updates[i].text
+                if existing_links.get(link)==None or existing_links.get(link)!=update:
+                    newlinks[link]=update
                 else:
                     stop_scraping=True
                     break
-        prepend_links(FILE_PATH,newlinks)
         current_page+=1
         if current_page == last_page_number:
             stop_scraping=True
+    existing_links.update(newlinks)
+    with open (FILE_PATH,'w',encoding='utf-8')as f:
+        json.dump(existing_links,f, ensure_ascii=False)
+    return newlinks
