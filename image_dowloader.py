@@ -2,11 +2,13 @@ import requests
 import os
 from bs4 import BeautifulSoup
 import logging
+import json
 logger = logging.getLogger(__name__)
 
-'''sua lai cac relative path dai hon khi tao file'''
 def img_dowloader(link):    #link(str)
     chapter_links={}
+    tags=[]
+    info={}
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
         'referer': 'https://placeholder/',
@@ -22,9 +24,16 @@ def img_dowloader(link):    #link(str)
         if response.status_code==200:
             soup=BeautifulSoup(response,'html.parser')
             name=soup.select_one('h1').text
-            cover_img=soup.select_one('img.')['href']       #sua lai
+            cover_img=soup.select_one('div.col-xs-4.col-image > img')['href']
+            modified_time=soup.select_one('#item-detail > time').text
+            list_tags=soup.select(' p.col-xs-8 > a')
+            for tag in list_tags:
+                tags.append(tag.text)
+            info.update({'modified_time':modified_time,'tags':tags})       #sap xep theo ngay update hoac tags
             relpath_name=os.path.join('database',f'{name}')
             os.makedirs(relpath_name,exist_ok=True)
+            with open(f'{relpath_name}/info.json','w',encoding='utf-8') as f:
+                json.dump(info,f,ensure_ascii=False,indent=4)
             with open(f'{name}', 'wb') as f:
                 ext = os.path.splitext(cover_img)[1]  # Trích xuất đuôi file gốc từ img (vd: .webp, .png, .jpg)
                 if not ext:  # Nếu img không có đuôi file thì mặc định gán là .webp
@@ -53,7 +62,7 @@ def img_dowloader(link):    #link(str)
                     for img_url in img_urls:
                         try:
                             img_url=img_url['src']
-                            clean_info=img_url.replace('https://sv3.2tcdn.cfd/','').replace('.webp','').split('/')  #src="https://sv3.2tcdn.cfd/ba-me-nhan-con-nuoi/0/1.webp"
+                            clean_info=img_url.replace('https://sv3.2tcdn.cfd/','').replace('.webp','').split('/')  #src="https://sv3.2tcdn.cfd/cai-gi-do-khong-nen-biet/0/1.webp"
                             chap_index=img_url.get_text(clean_info[1])
                             page_index=img_url.get_text(clean_info[2])
                             response = requests.get(img_url, headers=headers, timeout=10)
