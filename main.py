@@ -18,11 +18,14 @@ logging.basicConfig(
 )
 
 def main():
-    os.makedirs('database',exist_ok=True)
-    
+    os.makedirs('database',exist_ok=True)    
     links_to_update=get_links()
     for link in links_to_update:
-        img_dowloader(link)
+        try:
+            img_dowloader(link)
+        except Exception as e:
+            print(f'Đã xảy ra lỗi khi tải {link}:',e)
+
 
 if __name__ == "__main__":
     print("Đang chạy main.py...") 

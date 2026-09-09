@@ -7,14 +7,19 @@ logger = logging.getLogger(__name__)
 FILE_PATH="links_database.json"     
 
 def load_existing_links(file_path):
-    existing_links={}
-    if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            existing_links=json.load(f)
-    else:
-        with open(file_path,'w',encoding='utf-8')as f:
-            json.dump("",f,ensure_ascii=False,indent=4)
-    return existing_links
+    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
+        
+    return {}
 
 def get_links():
     existing_links=load_existing_links(FILE_PATH)
@@ -23,8 +28,6 @@ def get_links():
     newlinks={}
 
     while not stop_scraping:
-        # Giả lập chính xác Request Headers bạn vừa gửi
-        
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
             'referer': 'https://www.placeholder/',
@@ -43,22 +46,24 @@ def get_links():
                 impersonate="chrome120"
             )
             if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
+                soup = BeautifulSoup(response.text, 'lxml')
                 all_page= soup.select("a.page-link")
-                last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung
-                links=soup.select("a.jtip")
-                updates=soup.select(f'div:nth-child({i}) > figure > figcaption > ul > li:nth-child(1) > a')
-                i=0
-                for link in links:
-                    link=link["href"]
-                    update=updates[i].text
-                    if existing_links.get(link)==None or existing_links.get(link)!=update:
-                        newlinks[link]=update
+                last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung (gan 2000 trang)
+                items = soup.select("figure")
+                for item in items:
+                    link_tag = item.select_one("a.jtip")
+                    update_tag = item.select_one("figcaption > ul > li:nth-child(1) > a")
+                    if not link_tag or not update_tag:
+                        continue
+                    link = link_tag.get("href")
+                    update = update_tag.text.strip()
+                    if existing_links.get(link) != update:
+                        newlinks[link] = update
                     else:
                         stop_scraping=True
                         break
             current_page+=1
-            if current_page == last_page_number:
+            if current_page >= last_page_number:
                 stop_scraping=True
         except Exception as e:
             # logger.exception sẽ tự động ghi lại toàn bộ Traceback lỗi
