@@ -2,17 +2,21 @@ from curl_cffi import requests
 from bs4 import BeautifulSoup
 import json
 import os
-FILE_PATH="links_database.json"
-with open(FILE_PATH,'w',encoding='utf-8')as f:
-    json.dump("",f,ensure_ascii=False,indent=4)
+import logging
+logger = logging.getLogger(__name__)
+FILE_PATH="links_database.json"     
+
 def load_existing_links(file_path):
     existing_links={}
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             existing_links=json.load(f)
+    else:
+        with open(file_path,'w',encoding='utf-8')as f:
+            json.dump("",f,ensure_ascii=False,indent=4)
     return existing_links
 
-def get_links(is_first_run):
+def get_links():
     existing_links=load_existing_links(FILE_PATH)
     stop_scraping=False
     current_page = 1
@@ -32,29 +36,33 @@ def get_links(is_first_run):
             'sec-fetch-site': 'cross-site'
         }
         # Giả lập vân tay TLS Chrome vượt Cloudflare WAF
-        response = requests.get(
-            f"https://www.placeholder/{current_page}", 
-            headers=headers, 
-            impersonate="chrome120"
-        )
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, "html.parser")
-            all_page= soup.select("a.page-link")
-            last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung
-            links=soup.select("a.jtip")
-            updates=soup.select(f'div:nth-child({i}) > figure > figcaption > ul > li:nth-child(1) > a')
-            i=0
-            for link in links:
-                link=link["href"]
-                update=updates[i].text
-                if existing_links.get(link)==None or existing_links.get(link)!=update:
-                    newlinks[link]=update
-                else:
-                    stop_scraping=True
-                    break
-        current_page+=1
-        if current_page == last_page_number:
-            stop_scraping=True
+        try:
+            response = requests.get(
+                f"https://www.placeholder/{current_page}", 
+                headers=headers, 
+                impersonate="chrome120"
+            )
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                all_page= soup.select("a.page-link")
+                last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung
+                links=soup.select("a.jtip")
+                updates=soup.select(f'div:nth-child({i}) > figure > figcaption > ul > li:nth-child(1) > a')
+                i=0
+                for link in links:
+                    link=link["href"]
+                    update=updates[i].text
+                    if existing_links.get(link)==None or existing_links.get(link)!=update:
+                        newlinks[link]=update
+                    else:
+                        stop_scraping=True
+                        break
+            current_page+=1
+            if current_page == last_page_number:
+                stop_scraping=True
+        except Exception as e:
+            # logger.exception sẽ tự động ghi lại toàn bộ Traceback lỗi
+            logger.exception("Lỗi xảy ra trong hàm get_links():")
     existing_links.update(newlinks)
     with open (FILE_PATH,'w',encoding='utf-8')as f:
         json.dump(existing_links,f, ensure_ascii=False)
