@@ -14,7 +14,7 @@ def img_dowloader(link):    #link(str)
     info={}
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
-        'referer': 'https://placeholder/',
+        'referer': 'https://www.hentaivnx.live/',
         'accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
         'accept-language': 'en-US,en;q=0.7',
         'sec-ch-ua': '"Chromium";v="152", "Not?A_Brand";v="24", "Brave";v="152"',
@@ -78,7 +78,7 @@ def img_dowloader(link):    #link(str)
                                             page_name=os.path.join(relpath_chap,page_name)
                                             with open(page_name, 'wb') as f:
                                                 f.write(img_data)
-
+                                                
                                         else:
                                             print(f"Lỗi Status Code: {response.status_code} tại truyện {name} chap {chap_index} ảnh page {page_index}")    
                                     except Exception as e:

@@ -30,7 +30,7 @@ def get_links():
     while not stop_scraping:
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36',
-            'referer': 'https://www.placeholder/',
+            'referer': 'https://www.hentaivnx.live/',
             'accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
             'accept-language': 'en-US,en;q=0.7',
             'sec-ch-ua': '"Chromium";v="152", "Not?A_Brand";v="24", "Brave";v="152"',
@@ -41,7 +41,7 @@ def get_links():
         # Giả lập vân tay TLS Chrome vượt Cloudflare WAF
         try:
             response = requests.get(
-                f"https://www.placeholder/{current_page}", 
+                f"https://www.hentaivnx.live/{current_page}", 
                 headers=headers, 
                 impersonate="chrome120"
             )

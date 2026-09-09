@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 # Tạo tên file log theo ngày (VD: error_2026-09-09.log)
-log_filename = f"error_{datetime.now().strftime('%Y-%m-%d')}.log"
+log_filename = f"logs/error_{datetime.now().strftime('%Y-%m-%d')}.log"
 
 # Cấu hình logging toàn hệ thống
 logging.basicConfig(
