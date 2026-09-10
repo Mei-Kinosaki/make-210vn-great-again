@@ -4,13 +4,11 @@ from image_dowloader import img_dowloader
 import logging
 from datetime import datetime
 
-# Tạo tên file log theo ngày (VD: error_2026-09-09.log)
-log_filename = f"logs/error_{datetime.now().strftime('%Y-%m-%d')}.log"
-
-# Cấu hình logging toàn hệ thống
-logging.basicConfig(
+os.makedirs('logs', exist_ok=True)
+log_filename = os.path.join('logs', f"error_{datetime.now().strftime('%Y-%m-%d')}.log")
+logging.basicConfig(        # Cấu hình logging toàn hệ thống
     filename=log_filename,
-    filemode='a', # 'a' = Append (ghi nối tiếp các lần chạy trong ngày, không ghi đè)
+    filemode='a',           # 'a' = Append (ghi nối tiếp các lần chạy trong ngày, không ghi đè)
     format='%(asctime)s [%(levelname)s] (%(filename)s:%(lineno)d) - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.ERROR,
@@ -26,7 +24,9 @@ def main():
         except Exception as e:
             print(f'Đã xảy ra lỗi khi tải {link}:',e)
 
-
 if __name__ == "__main__":
-    print("Đang chạy main.py...") 
-
+    print("Đang chạy main.py...")
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n[!] Đã hủy chương trình bằng Ctrl + C.")

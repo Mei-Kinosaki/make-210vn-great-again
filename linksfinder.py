@@ -41,7 +41,7 @@ def get_links():
         # Giả lập vân tay TLS Chrome vượt Cloudflare WAF
         try:
             response = requests.get(
-                f"https://www.hentaivnx.live/{current_page}", 
+                f"https://www.hentaivnx.live/?page={current_page}",       #https://www.hentaivnx.live/?page=47
                 headers=headers, 
                 impersonate="chrome120"
             )
@@ -50,25 +50,41 @@ def get_links():
                 all_page= soup.select("a.page-link")
                 last_page_number=int(all_page[-2].text.strip())        #Tim trang cuoi cung (gan 2000 trang)
                 items = soup.select("figure")
+                page_has_duplicate=False
+                page_new_count = 0
                 for item in items:
                     link_tag = item.select_one("a.jtip")
                     update_tag = item.select_one("figcaption > ul > li:nth-child(1) > a")
+                    
                     if not link_tag or not update_tag:
                         continue
                     link = link_tag.get("href")
                     update = update_tag.text.strip()
+                    if not link:
+                        continue
                     if existing_links.get(link) != update:
-                        newlinks[link] = update
+                        if link not in newlinks:
+                            newlinks[link] = update
+                            page_new_count += 1
                     else:
-                        stop_scraping=True
-                        break
-            current_page+=1
-            if current_page >= last_page_number:
-                stop_scraping=True
+                        page_has_duplicate = True
+                print(f"Đã duyệt xong trang {current_page}: +{page_new_count} link mới (Tổng gom được: {len(newlinks)})")
+                current_page+=1
+                if page_has_duplicate:
+                    print("--> Đã đụng dữ liệu cũ. Dừng tìm kiếm link mới!")
+                    stop_scraping = True
+                    break
+                if current_page >= last_page_number:
+                    stop_scraping=True
+            else:
+                print(f"Lỗi Status Code: {response.status_code} tại page {current_page}")
+                break
         except Exception as e:
             # logger.exception sẽ tự động ghi lại toàn bộ Traceback lỗi
             logger.exception("Lỗi xảy ra trong hàm get_links():")
-    existing_links.update(newlinks)
-    with open (FILE_PATH,'w',encoding='utf-8')as f:
-        json.dump(existing_links,f, ensure_ascii=False)
+    if newlinks:
+        existing_links.update(newlinks)
+        with open(FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(existing_links, f, ensure_ascii=False, indent=4)
+        print(f"==> Đã lưu {len(newlinks)} link mới vào {FILE_PATH}")
     return newlinks
