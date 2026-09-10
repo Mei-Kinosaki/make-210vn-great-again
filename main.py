@@ -21,9 +21,11 @@ def main():
     links_to_update=get_links()
     try:
         to_do=int(input('Nhập số truyện muốn tải về, 0 là tải toàn bộ:'))
+        if to_do==0:
+            to_do=None
         for link in islice(links_to_update, to_do):
             try:
-                img_dowloader(links_to_update)
+                img_dowloader(link)
             except Exception as e:
                 print(f'Đã xảy ra lỗi khi tải {link}:',e)
     except Exception as e:
