@@ -26,6 +26,7 @@ def get_links():
     stop_scraping=False
     current_page = 1
     newlinks={}
+    links_to_update={}
 
     while not stop_scraping:
         headers = {
@@ -83,8 +84,8 @@ def get_links():
             # logger.exception sẽ tự động ghi lại toàn bộ Traceback lỗi
             logger.exception("Lỗi xảy ra trong hàm get_links():")
     if newlinks:
-        existing_links.update(newlinks)
+        existing_links = newlinks | existing_links
         with open(FILE_PATH, 'w', encoding='utf-8') as f:
             json.dump(existing_links, f, ensure_ascii=False, indent=4)
-        print(f"==> Đã lưu {len(newlinks)} link mới vào {FILE_PATH}")
+        print(f"==> Đã lưu {len(newlinks)} link mới vào đầu file {FILE_PATH}")
     return newlinks
