@@ -14,6 +14,8 @@ from urllib.parse import urlparse
 FORBIDDEN_CHARS = r'\/*?:"<>|'                                              # Khai báo bảng ký tự cấm (thêm \x00-\x1f nếu cần)
 trans_table = str.maketrans(FORBIDDEN_CHARS, '-' * len(FORBIDDEN_CHARS))    # Tạo bảng ánh xạ: biến tất cả ký tự cấm thành '-'  
 def img_dowloader(link):
+    
+    
     chapter_links = {}
     tags = []
     info = {}
@@ -41,6 +43,16 @@ def img_dowloader(link):
             soup = BeautifulSoup(response.content, 'lxml')
             h1_tag = soup.select_one('h1')
             name = h1_tag.text.strip().translate(trans_table).strip(' .')
+            list_tags = soup.select('p.col-xs-8 > a')
+            for tag in list_tags:
+                tags.append(tag.text.strip())
+            with open('config.json','r',encoding='utf-8') as f:
+                config=json.load(f)
+                if i in tags and i in config['forbidden_tags']:
+                    return f'Đã bỏ qua truyện {name}, do vi phạm tag {i}'
+                        
+            h1_tag = soup.select_one('h1')
+            name = h1_tag.text.strip().translate(trans_table).strip(' .')
             cover_tag = soup.select_one('div.col-xs-4.col-image > img')
             if cover_tag:
                 cover_img = cover_tag.get('src') or cover_tag.get('href') or cover_tag.get('data-src')
@@ -50,9 +62,7 @@ def img_dowloader(link):
             modified_time_tag = soup.select_one('#item-detail > time')
             modified_time = modified_time_tag.text.strip() if modified_time_tag else ""
 
-            list_tags = soup.select('p.col-xs-8 > a')
-            for tag in list_tags:
-                tags.append(tag.text.strip())
+            
 
             info.update({'modified_time': modified_time, 'tags': tags})
             relpath_name = os.path.join('database', f'{name}')
@@ -87,6 +97,7 @@ def img_dowloader(link):
                         if chap_res.status_code == 200:
                             chap_soup = BeautifulSoup(chap_res.content, 'lxml')
                             os.makedirs(relpath_chap, exist_ok=True)
+                            missing_page=[]
 
                             img_urls = chap_soup.select('div.page-chapter > img')
                             for img_url in img_urls:
@@ -98,16 +109,36 @@ def img_dowloader(link):
                                 page_index = clean_info[2] if len(clean_info) > 2 else "0"
                                 ext = os.path.splitext(src)[1] or '.webp'
                                 page_name = os.path.join(relpath_chap, f'{name}-chap{chap_index}-page{page_index}{ext}')
-                                try:
-                                    img_data_res = requests.get(src, headers=headers, impersonate="chrome120", timeout=10)
-                                    if img_data_res.status_code == 200:
-                                        with open(page_name, 'wb') as f:
-                                            f.write(img_data_res.content)
-                                    else:
-                                        print(f"Lỗi Status Code {img_data_res.status_code} khi tải ảnh: {src}")
+                                attemps=1
+                                while attemps<=3:
+                                    try:
+                                        img_data_res = requests.get(src, headers=headers, impersonate="chrome120", timeout=30)
+                                        if img_data_res.status_code == 200:
+                                            with open(page_name, 'wb') as f:
+                                                f.write(img_data_res.content)
+                                        else:
+                                            print(f"Lỗi Status Code {img_data_res.status_code} khi tải ảnh: {src}")
+                                            attemps+=1
 
-                                except Exception as e:
-                                    print(f"Lỗi tải ảnh đơn lẻ: {e} tại ảnh {page_name}")
+                                    except Exception as e:
+                                        print(f"Lỗi tải ảnh đơn lẻ: {e} tại ảnh {page_name}  lần {attemps}")
+                                if attemps>3:
+                                    missing_page.append(src)
+                            if os.path.exists('missing_page.json') and os.path.getsize('missing_page.json') > 0:
+                                try:
+                                    with open('missing_page.json', "r", encoding="utf-8") as f:
+                                        temp=json.load(f)
+                                except Exception:
+                                    temp= []
+                            for i in missing_page :
+                                if i not in temp:
+                                    temp.append(i)
+                                
+                            try:
+                                with open('missing_page.json', "w", encoding="utf-8") as f:
+                                    json.dump({temp}, f, ensure_ascii=False, indent=4)
+                            except Exception:
+                                pass
                         else:
                             print(f"Lỗi Status Code {chap_res.status_code} tại chap link: {chapter_link}")
 

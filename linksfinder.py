@@ -26,7 +26,6 @@ def get_links():
     stop_scraping=False
     current_page = 1
     newlinks={}
-    links_to_update={}
 
     while not stop_scraping:
         headers = {
