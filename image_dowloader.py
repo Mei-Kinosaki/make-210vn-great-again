@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 
 FORBIDDEN_CHARS = r'\/*?:"<>|'                                              # Khai báo bảng ký tự cấm (thêm \x00-\x1f nếu cần)
 trans_table = str.maketrans(FORBIDDEN_CHARS, '-' * len(FORBIDDEN_CHARS))    # Tạo bảng ánh xạ: biến tất cả ký tự cấm thành '-'  
-def img_dowloader(link):
-    
+def img_dowloader(link,forbidden_tags=None):
+    forbidden_tags = forbidden_tags or []
     
     chapter_links = {}
     tags = []
@@ -39,20 +39,18 @@ def img_dowloader(link):
         # Sử dụng curl_cffi với giả lập TLS Vân tay Chrome
         response = requests.get(link, headers=headers, impersonate="chrome120", timeout=15)
         
-        if response.status_code == 200:
+        if response.status_code == 200:                                                                         #vao link truyen
             soup = BeautifulSoup(response.content, 'lxml')
             h1_tag = soup.select_one('h1')
             name = h1_tag.text.strip().translate(trans_table).strip(' .')
             list_tags = soup.select('p.col-xs-8 > a')
             for tag in list_tags:
                 tags.append(tag.text.strip())
-            with open('config.json','r',encoding='utf-8') as f:
-                config=json.load(f)
-                if i in tags and i in config['forbidden_tags']:
-                    return f'Đã bỏ qua truyện {name}, do vi phạm tag {i}'
-                        
-            h1_tag = soup.select_one('h1')
-            name = h1_tag.text.strip().translate(trans_table).strip(' .')
+            matched_forbidden = set(tags).intersection(forbidden_tags)                                          #loc theo tags
+            if matched_forbidden:
+                violated_tag = list(matched_forbidden)[0]
+                return f'Đã bỏ qua truyện "{name}", do vi phạm tag: {violated_tag}'
+
             cover_tag = soup.select_one('div.col-xs-4.col-image > img')
             if cover_tag:
                 cover_img = cover_tag.get('src') or cover_tag.get('href') or cover_tag.get('data-src')
@@ -116,14 +114,17 @@ def img_dowloader(link):
                                         if img_data_res.status_code == 200:
                                             with open(page_name, 'wb') as f:
                                                 f.write(img_data_res.content)
+                                                break
                                         else:
                                             print(f"Lỗi Status Code {img_data_res.status_code} khi tải ảnh: {src}")
                                             attemps+=1
 
                                     except Exception as e:
                                         print(f"Lỗi tải ảnh đơn lẻ: {e} tại ảnh {page_name}  lần {attemps}")
+                                        attemps+=1
                                 if attemps>3:
                                     missing_page.append(src)
+                            temp=[]
                             if os.path.exists('missing_page.json') and os.path.getsize('missing_page.json') > 0:
                                 try:
                                     with open('missing_page.json', "r", encoding="utf-8") as f:
@@ -136,7 +137,7 @@ def img_dowloader(link):
                                 
                             try:
                                 with open('missing_page.json', "w", encoding="utf-8") as f:
-                                    json.dump({temp}, f, ensure_ascii=False, indent=4)
+                                    json.dump(temp, f, ensure_ascii=False, indent=4)
                             except Exception:
                                 pass
                         else:
